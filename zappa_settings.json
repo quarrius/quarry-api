@@ -1,0 +1,35 @@
+{
+    "prod": {
+        "app_function": "app.app",
+        "aws_region": "us-east-1",
+        "cache_cluster_enabled": false,
+        "debug": false,
+        "delete_zip": true,
+        "domain": "api.quarri.us",
+        "events": [],
+        "http_methods": ["GET", "POST"],
+        "integration_response_codes": [200, 301, 302, 403, 404, 500],
+        "keep_warm": false,
+        "log_level": "DEBUG",
+        "memory_size": 128,
+        "method_response_codes": [200, 301, 302, 403, 404, 500],
+        "parameter_depth": 8,
+        "project_name": "quarry-api-zappa",
+        "role_name": "quarry-api-zappa-role",
+        "s3_bucket": "quarrius-builds",
+        "timeout_seconds": 10,
+        "touch": false,
+        "use_precompiled_packages": true,
+        "use_apigateway": true,
+        "vpc_config": {
+            "SubnetIds": [
+                "subnet-78ecc620",
+                "subnet-37e9e80a",
+                "subnet-c0eefdb6"
+            ],
+            "SecurityGroupIds": [
+                "sg-7588ba0e"
+            ]
+        }
+    }
+}

@@ -1,2 +1,4 @@
-chalice==0.0.1
+Flask==0.11.1
+# Zappa needs a fix to be not broken
+git+https://github.com/quarrius/Zappa.git@quarrius
 git+https://github.com/quarrius/toybox.git
