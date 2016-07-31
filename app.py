@@ -19,10 +19,12 @@ flask_db = FlaskDB(app, DATABASE)
 
 s3c = boto3.client('s3')
 
-KEY_EXPIRES_IN      = datetime.timedelta(hours=1)
-MIN_UPLOAD_SIZE     = 0
-MAX_UPLOAD_SIZE     = 16 * 1024 * 1024
-UPLOAD_BUCKET       = 'quarrius-input'
+UPLOAD_KEY_TTL, \
+UPLOAD_BUCKET       = CFG.mget([
+    'config:quarry-api:UPLOAD_KEY_TTL',
+    'config:quarry-api:UPLOAD_BUCKET',
+])
+UPLOAD_KEY_TTL = int(UPLOAD_KEY_TTL)
 
 def json_response(orig_func):
     @functools.wraps(orig_func)
@@ -51,6 +53,10 @@ def get_stream_upload_credentials(api_key):
     post_api_key = str(api_key)
     post_user_guid = str(user.guid)
     post_world_guid = str(world.guid)
+    size_range = [int(s) for s in CFG.mget([
+        'config:quarry-api:WORLD_OBJ_MIN_SIZE',
+        'config:quarry-api:WORLD_OBJ_MAX_SIZE',
+    ])]
     return s3c.generate_presigned_post(
         Bucket=UPLOAD_BUCKET,
         Key=os.path.join('worlds', post_user_guid, post_world_guid, '${filename}'),
@@ -62,45 +68,48 @@ def get_stream_upload_credentials(api_key):
             'x-amz-meta-quarry-world-id':   post_world_guid,
         },
         Conditions=[
-            {'acl':                             'private'},
-            ['content-length-range',            MIN_UPLOAD_SIZE, MAX_UPLOAD_SIZE],
+            {'acl':                         'private'},
+            ['content-length-range'] +      size_range,
             {'x-amz-meta-quarry-api-key':   post_api_key},
             {'x-amz-meta-quarry-user-id':   post_user_guid},
             {'x-amz-meta-quarry-world-id':  post_world_guid},
 
         ],
-        ExpiresIn=KEY_EXPIRES_IN.seconds,
+        ExpiresIn=UPLOAD_KEY_TTL,
     )
 
 @app.route('/authorize-upload/world-archive/<uuid:api_key>')
 @json_response
 def get_archive_upload_credentials(api_key):
-    # world = get_object_or_404(World, World.api_key == api_key)
-    world = World.select().where(World.api_key == api_key).first()
+    world = get_object_or_404(World, World.api_key == api_key)
     user = world.user
 
     post_api_key = str(api_key)
     post_user_guid = str(user.guid)
     post_world_guid = str(world.guid)
+    size_range = [int(s) for s in CFG.mget([
+        'config:quarry-api:ARCHIVE_MIN_SIZE',
+        'config:quarry-api:ARCHIVE_MAX_SIZE',
+    ])]
     return s3c.generate_presigned_post(
         Bucket=UPLOAD_BUCKET,
         Key='world-archives/{archive_name}.zip'.format(archive_name=post_api_key),
         Fields={
             'acl':                          'private',
-            'success_action_status':        200,
+            # 'success_action_status':        200,
             'x-amz-meta-quarry-api-key':    post_api_key,
             'x-amz-meta-quarry-user-id':    post_user_guid,
             'x-amz-meta-quarry-world-id':   post_world_guid,
         },
         Conditions=[
             {'acl':                         'private'},
-            ['content-length-range',        MIN_UPLOAD_SIZE, MAX_UPLOAD_SIZE],
+            ['content-length-range'] +      size_range,
             {'x-amz-meta-quarry-api-key':   post_api_key},
             {'x-amz-meta-quarry-user-id':   post_user_guid},
             {'x-amz-meta-quarry-world-id':  post_world_guid},
 
         ],
-        ExpiresIn=KEY_EXPIRES_IN.seconds,
+        ExpiresIn=UPLOAD_KEY_TTL,
     )
 
 if __name__ == '__main__':
